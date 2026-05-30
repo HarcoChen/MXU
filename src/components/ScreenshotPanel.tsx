@@ -77,6 +77,7 @@ export function ScreenshotPanel() {
   const activeInstance = instances.find((instance) => instance.id === instanceId);
   const taskStatus = instanceId ? instanceTaskStatus[instanceId] : undefined;
   const isTaskRunning = Boolean(activeInstance?.isRunning) || taskStatus === 'Running';
+  // 预览截图可能触发部分 Win32 截图后端抢前台；只在任务运行中启用实时预览。
   const canPreview = connectionStatus === 'Connected' && isTaskRunning;
 
   // 从 store 获取当前实例的截图流状态
@@ -118,7 +119,7 @@ export function ScreenshotPanel() {
     };
   }, []);
 
-  // 订阅/退订后端截图循环（确保全局只有一份 post_screencap 在运行）
+  // 订阅/退订后端截图循环（仅任务运行中启用，确保全局只有一份 post_screencap 在运行）
   useEffect(() => {
     if (!instanceId || !isStreaming || !canPreview) return;
 
@@ -307,14 +308,14 @@ export function ScreenshotPanel() {
     }
   }, [canPreview, isStreaming, setIsStreaming]);
 
-  // 面板折叠时暂停截图，展开时自动开始（如果已连接）
+  // 面板折叠时暂停截图，展开时仅在任务运行中自动开始
   useEffect(() => {
     if (!screenshotPanelExpanded || !isPanelVisible) {
       // 折叠时暂停截图流，同步更新状态和图标
       streamingRef.current = false;
       setIsStreaming(false);
     } else if (canPreview && instanceId) {
-      // 展开且已连接时，自动开始截图
+      // 展开且任务运行中，自动开始截图
       streamingRef.current = true;
       setIsStreaming(true);
       setError(null);
@@ -322,9 +323,9 @@ export function ScreenshotPanel() {
     }
   }, [screenshotPanelExpanded, isPanelVisible, canPreview]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 组件挂载或状态恢复后，如果已连接且面板可见，自动启动截图流
+  // 组件挂载或状态恢复后，如果任务运行中且面板可见，自动启动截图流
   useEffect(() => {
-    // 避免重复启动（仅在首次检测到已连接时启动）
+    // 避免重复启动（仅在首次检测到可预览时启动）
     if (hasAutoStartedRef.current) return;
 
     if (canPreview && !isStreaming && screenshotPanelExpanded && isPanelVisible && instanceId) {
@@ -512,7 +513,7 @@ export function ScreenshotPanel() {
   );
 
   useEffect(() => {
-    // 检测连接状态从非 Connected 变为 Connected
+    // 检测连接状态变化，用于断开时清理截图状态
     const wasConnected = prevConnectionStatusRef.current === 'Connected';
     const isConnected = connectionStatus === 'Connected';
     prevConnectionStatusRef.current = connectionStatus;
@@ -532,6 +533,7 @@ export function ScreenshotPanel() {
       isPanelVisible &&
       instanceId
     ) {
+      // 从未连接恢复到可预览状态时，跟随旧逻辑自动启动截图流。
       streamingRef.current = true;
       setIsStreaming(true);
       setError(null);

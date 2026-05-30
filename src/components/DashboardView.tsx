@@ -105,6 +105,7 @@ function InstanceCard({ instanceId, instanceName, isActive, onSelect }: Instance
   const instance = instances.find((i) => i.id === instanceId);
   const isRunning = instance?.isRunning || false;
   const isTaskRunning = isRunning || taskStatus === 'Running';
+  // 预览截图可能触发部分 Win32 截图后端抢前台；只在任务运行中启用实时预览。
   const canPreview = isConnected && isTaskRunning;
   const tasks = instance?.selectedTasks || [];
   const enabledTasks = tasks.filter((t) => t.enabled);
@@ -408,7 +409,7 @@ function InstanceCard({ instanceId, instanceName, isActive, onSelect }: Instance
     };
   }, []);
 
-  // 订阅/退订后端截图循环（确保全局只有一份 post_screencap 在运行）
+  // 订阅/退订后端截图循环（仅任务运行中启用，确保全局只有一份 post_screencap 在运行）
   useEffect(() => {
     if (!instanceId || !isStreaming || !canPreview) return;
 
@@ -434,7 +435,7 @@ function InstanceCard({ instanceId, instanceName, isActive, onSelect }: Instance
   }, [isStreaming, canPreview, streamLoop]);
 
   // 任务开始后自动开始截图流
-  const prevConnectedRef = useRef(false);
+  const prevCanPreviewRef = useRef(false);
   const hasAutoStartedRef = useRef(false);
 
   // 未运行任务时禁用实时预览，并确保后台截图订阅被关闭
@@ -462,19 +463,19 @@ function InstanceCard({ instanceId, instanceName, isActive, onSelect }: Instance
     }
   }, [canPreview, isStreaming, instanceId, setInstanceScreenshotStreaming, streamLoop]);
 
-  // 连接状态变化时的处理（从未连接变为已连接时重新启动）
+  // 可预览状态变化时的处理（任务开始后重新启动）
   useEffect(() => {
-    const wasConnected = prevConnectedRef.current;
-    prevConnectedRef.current = isConnected;
+    const couldPreview = prevCanPreviewRef.current;
+    prevCanPreviewRef.current = canPreview;
 
-    // 从未连接变为已连接时，重置自动启动标记并启动
-    if (canPreview && !wasConnected && !isStreaming) {
+    // 从不可预览变为可预览时，重置自动启动标记并启动
+    if (canPreview && !couldPreview && !isStreaming) {
       hasAutoStartedRef.current = true;
       streamingRef.current = true;
       setInstanceScreenshotStreaming(instanceId, true);
       streamLoop();
     }
-  }, [canPreview, isConnected, isStreaming, instanceId, setInstanceScreenshotStreaming, streamLoop]);
+  }, [canPreview, isStreaming, instanceId, setInstanceScreenshotStreaming, streamLoop]);
 
   // 全屏模式切换
   const toggleFullscreen = useCallback(

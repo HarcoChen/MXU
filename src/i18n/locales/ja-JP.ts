@@ -239,6 +239,7 @@ export default {
       resourceFailed: 'リソースの読み込みに失敗しました',
       startFailed: 'タスクの開始に失敗しました',
       alreadyRunning: 'タスクは既に実行中か、前処理を実行しています',
+      taskNotFound: '指定されたタスクが存在しないか、削除されています',
       noRunnableTasks: '実行可能なタスクがありません。タスク定義とエントリ設定を確認してください',
       primaryTasksIncomplete: '前段タスクが正常に終了しなかったため、後段タスクをスキップしました',
       workstationLocked:

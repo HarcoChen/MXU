@@ -331,6 +331,9 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
 
       const tasksToRun = filterTasksForRun(targetTasks, { startFromTaskId, singleTaskId });
       if (tasksToRun.length === 0) {
+        if (singleTaskId || startFromTaskId) {
+          return failStart(t('taskList.autoConnect.taskNotFound'));
+        }
         return failStart(t('dashboard.noEnabledTasks'));
       }
 
@@ -412,9 +415,6 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
       if (!shouldUseDummyController) {
         // 视觉任务必须有明确的控制器配置，避免状态异常时绕过按类型执行的安全检查。
         if (!controller) {
-          log.warn(
-            `实例 ${targetInstance.name}: 找不到控制器配置${controllerName ? ` (${controllerName})` : ''}`,
-          );
           return failStart(t('errors.controllerNotFound'));
         }
 
@@ -424,7 +424,6 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
           requiresUnlockedWorkstation(controller.type) &&
           (await maaService.isWorkstationLocked())
         ) {
-          log.warn(`实例 ${targetInstance.name}: 检测到电脑处于锁屏状态，取消启动`);
           return failStart(t('taskList.autoConnect.workstationLocked'));
         }
       }
@@ -1306,7 +1305,11 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
         if (hasTrailingBatch && primaryTaskIds.length > 0) {
           const primaryResult = await maaService.waitForTasks(targetId, primaryTaskIds);
           if (!primaryResult.allDone || primaryResult.stopped) {
-            return failStart(t('taskList.autoConnect.primaryTasksIncomplete'));
+            const message = t('taskList.autoConnect.primaryTasksIncomplete');
+            log.warn(`实例 ${targetInstance.name}: ${message}`);
+            addLog(targetId, { type: 'warning', message });
+            onPhaseChange?.('idle');
+            return true;
           }
           const trailingTaskIds = await runTaskBatch(trailing, false, '收尾', true);
           startedTaskIds.push(...trailingTaskIds);

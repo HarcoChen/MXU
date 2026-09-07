@@ -237,6 +237,7 @@ export default {
       resourceFailed: '资源加载失败',
       startFailed: '任务启动失败',
       alreadyRunning: '任务已在运行或正在执行前置动作',
+      taskNotFound: '指定的任务不存在或已被删除',
       noRunnableTasks: '没有可执行的任务，请检查任务定义和入口配置',
       primaryTasksIncomplete: '前段任务未正常结束，已跳过收尾特殊任务',
       workstationLocked: '检测到电脑处于锁屏状态，请先解锁后再运行任务',

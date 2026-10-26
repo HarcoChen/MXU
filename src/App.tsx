@@ -416,8 +416,8 @@ function App() {
   // 尝试自动安装更新（无任务运行中时触发）
   const tryAutoInstallUpdate = useCallback(() => {
     const state = useAppStore.getState();
-    // -q 会话始终优先在任务结束后退出，更新留给下次普通启动安装。
-    // 参数未读取时也不安装，避免初始化期间抢先触发。
+    // 本次启动实际启用 -q 自动任务时优先退出，更新留给下次普通启动安装。
+    // 启动策略尚未确定时也不安装，避免初始化期间抢先触发。
     if (state.quitAfterRun !== false) return;
     if (state.downloadStatus !== 'completed') return;
     if (state.installStatus !== 'idle') return;
@@ -598,9 +598,14 @@ function App() {
     setErrorMessage('');
 
     try {
-      // 在恢复更新状态或分发任务前确定退出策略，所有自动安装入口共用此状态。
-      const shouldQuit = isTauri() ? await invoke<boolean>('has_quit_after_run_flag') : false;
-      useAppStore.getState().setQuitAfterRun(shouldQuit);
+      let shouldQuit = false;
+      if (isTauri()) {
+        try {
+          shouldQuit = await invoke<boolean>('has_quit_after_run_flag');
+        } catch (err) {
+          log.warn('读取 --quit-after-run 参数失败，按普通启动继续初始化:', err);
+        }
+      }
       log.info('加载 interface.json...');
       const result = await autoLoadInterface();
       setProjectInterface(result.interface);
@@ -885,6 +890,7 @@ function App() {
       // 新版本下载在后台进行，不影响本次任务启动。
       let autoStartTasksPending = false;
       let isAutoRunOnLaunchMode = false;
+      let unsubscribeQuitAfterRun: (() => void) | undefined;
       if (isTauri()) {
         try {
           const isAutoStart = await invoke<boolean>('is_autostart');
@@ -929,12 +935,13 @@ function App() {
               // -q/--quit-after-run：任务完成后关闭自身
               if (shouldQuit) {
                 log.info('命令行 --quit-after-run 参数：任务完成后将关闭自身');
-                const unsub = useAppStore.subscribe(
+                unsubscribeQuitAfterRun = useAppStore.subscribe(
                   (state) => state.instances.find((i) => i.id === targetInstanceId)?.isRunning,
                   (isRunning, prevIsRunning) => {
                     if (prevIsRunning && !isRunning) {
                       log.info('自动执行任务完成，关闭自身');
-                      unsub();
+                      unsubscribeQuitAfterRun?.();
+                      unsubscribeQuitAfterRun = undefined;
                       import('@tauri-apps/plugin-process').then(({ exit }) => exit(0));
                     }
                   },
@@ -951,6 +958,10 @@ function App() {
         }
       }
 
+      // -q 仅在本次启动将自动执行有效实例时生效，否则沿用普通更新流程。
+      shouldQuit = shouldQuit && autoStartTasksPending;
+      useAppStore.getState().setQuitAfterRun(shouldQuit);
+
       const dispatchPendingAutoStartTasks = () => {
         if (!autoStartTasksPending) return;
         autoStartTasksPending = false;
@@ -960,8 +971,14 @@ function App() {
             new CustomEvent('mxu-start-tasks', {
               detail: {
                 source: 'autostart',
-                onSettled: () => {
+                onSettled: (started: boolean) => {
                   autoTaskLaunchPendingRef.current = false;
+                  if (!started) {
+                    // 空任务、连接失败等情况不会产生任务结束事件，恢复普通更新流程。
+                    unsubscribeQuitAfterRun?.();
+                    unsubscribeQuitAfterRun = undefined;
+                    useAppStore.getState().setQuitAfterRun(false);
+                  }
                   // 启动失败时任务不会产生 running -> idle 状态变化，需要在这里补一次安装检查；
                   // 启动成功时仍处于运行态，本次检查会直接返回，并在任务结束后再次触发。
                   tryAutoInstallUpdate();

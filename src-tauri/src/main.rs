@@ -4,7 +4,15 @@
 #[cfg(target_os = "windows")]
 mod webview2;
 
+#[cfg(target_os = "macos")]
+mod macos_install;
+
 fn main() {
+    #[cfg(target_os = "macos")]
+    if !cfg!(debug_assertions) && macos_install::handle_launch() {
+        return;
+    }
+
     let _cli = mxu_lib::commands::system::init_cli();
 
     #[cfg(target_os = "windows")]

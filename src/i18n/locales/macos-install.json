@@ -1,0 +1,42 @@
+{
+  "en-US": {
+    "title": "Install application",
+    "quit": "Quit",
+    "failed": "Installation failed. The application will now quit.",
+    "exists": "An application with the same name already exists in /Applications. Move it aside before trying again.",
+    "dmgTitle": "Double-click to install",
+    "dmgHint": "Automatically installs in Applications. No dragging needed."
+  },
+  "zh-CN": {
+    "title": "安装应用",
+    "quit": "退出",
+    "failed": "安装失败，应用将退出。",
+    "exists": "/Applications 中已有同名应用，请先将其移走再重试。",
+    "dmgTitle": "双击图标，开始安装",
+    "dmgHint": "自动安装到 Applications，无需拖拽"
+  },
+  "zh-TW": {
+    "title": "安裝應用程式",
+    "quit": "結束",
+    "failed": "安裝失敗，應用程式將結束。",
+    "exists": "/Applications 中已有同名應用程式，請先將其移走再重試。",
+    "dmgTitle": "按兩下圖示，開始安裝",
+    "dmgHint": "自動安裝至 Applications，無需拖曳"
+  },
+  "ja-JP": {
+    "title": "アプリをインストール",
+    "quit": "終了",
+    "failed": "インストールに失敗しました。アプリを終了します。",
+    "exists": "/Applications に同名のアプリがあります。移動してから再試行してください。",
+    "dmgTitle": "ダブルクリックしてインストール",
+    "dmgHint": "Applications に自動インストールします"
+  },
+  "ko-KR": {
+    "title": "앱 설치",
+    "quit": "종료",
+    "failed": "설치에 실패했습니다. 앱을 종료합니다.",
+    "exists": "/Applications에 같은 이름의 앱이 있습니다. 기존 앱을 옮긴 후 다시 시도하세요.",
+    "dmgTitle": "아이콘을 더블 클릭하여 설치",
+    "dmgHint": "Applications에 자동으로 설치됩니다"
+  }
+}
